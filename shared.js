@@ -371,7 +371,7 @@ const X402 = {
    XP SYSTEM
    ════════════════════════════════════════════════════════════ */
 const XP = {
-  xpRequired(level) { return Math.floor(280 * Math.pow(1.10, level - 1)); },
+  xpRequired(level) { return Math.floor(2800 * Math.pow(1.10, level - 1)); },
 
   getEvolution(level) {
     let cur = CONFIG.EVOLUTIONS[0];
