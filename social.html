@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#04060f">
-<title>BaseXP — Social</title>
+<title>BaseXP — Invite</title>
 <meta name="base:app_id" content="6a18a84807babdffa06b0f05" />
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="shared.css">
@@ -12,33 +12,25 @@
 <body>
 <div class="app-wrapper">
   <header class="app-header">
-    <div class="brand"><div class="brand-logo">👥</div><div class="brand-name">Base<b>XP</b></div></div>
+    <div class="brand"><div class="brand-logo">🎁</div><div class="brand-name">Base<b>XP</b></div></div>
     <div class="wallet-chip" id="wallet-chip" onclick="onWalletChip()">
       <div class="wallet-dot" id="wallet-dot"></div><span id="wallet-addr">Connect</span>
       <span class="wallet-balance hidden" id="wallet-bal"></span>
     </div>
   </header>
 
-  <h1 class="page-title reveal">Community 🌐</h1>
-  <p class="page-sub reveal">Climb the ranks, invite friends, earn together.</p>
+  <h1 class="page-title reveal">Invite Friends 🎁</h1>
+  <p class="page-sub reveal">Share BaseXP and you both earn bonus XP.</p>
 
-  <div class="tab-row reveal">
-    <div class="tab active" data-tab="leaderboard" onclick="switchTab('leaderboard')">🏆 Ranks</div>
-    <div class="tab" data-tab="referral" onclick="switchTab('referral')">🎁 Invite</div>
-    <div class="tab" data-tab="feed" onclick="switchTab('feed')">📢 Feed</div>
-  </div>
-
-  <div id="tab-leaderboard" class="tab-content"></div>
-  <div id="tab-referral" class="tab-content hidden"></div>
-  <div id="tab-feed" class="tab-content hidden"></div>
+  <div id="invite-body" class="reveal"></div>
 
   <div class="page-bottom"></div>
 </div>
 
 <nav class="bottom-nav" style="display:none;"></nav>
 <div class="connect-gate" id="connect-gate">
-  <div class="gate-egg">👥</div><div class="gate-title text-gradient-blue">Join the Community</div>
-  <div class="gate-sub">Connect your wallet to see the leaderboard and invite friends for bonus XP.</div>
+  <div class="gate-egg">🎁</div><div class="gate-title text-gradient-blue">Invite & Earn</div>
+  <div class="gate-sub">Connect your wallet to get your referral code and invite friends for bonus XP.</div>
   <button class="btn btn--primary btn--lg btn--shine" onclick="WalletModal.show()">🔗 Connect Wallet</button>
 </div>
 <div id="toast-container" class="toast-container"></div>
@@ -49,66 +41,19 @@
 const $ = id => document.getElementById(id);
 function onWalletChip() { if (AppState.wallet.connected) { if (confirm('Disconnect wallet?')) Wallet.disconnect(); } else WalletModal.show(); }
 
-let activeTab = 'leaderboard';
-function switchTab(t) {
-  activeTab = t;
-  document.querySelectorAll('.tab').forEach(el => el.classList.toggle('active', el.dataset.tab === t));
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  $('tab-' + t).classList.remove('hidden');
-  if (t === 'leaderboard') renderLeaderboard();
-  if (t === 'referral') renderReferral();
-  if (t === 'feed') renderFeed();
-}
-
-// ── LEADERBOARD ──
-async function renderLeaderboard() {
-  const box = $('tab-leaderboard');
-  box.innerHTML = `<div class="lb-row skeleton" style="height:62px"></div>`.repeat(5);
-  let rows = [];
-  try {
-    const res = await fetch(`${CONFIG.WORKER_URL}/leaderboard`);
-    if (res.ok) { const d = await res.json(); rows = d.leaderboard || d.entries || d || []; }
-  } catch {}
-  const me = AppState.wallet.address?.toLowerCase();
-  if (!rows.length) {
-    // fallback demo + me
-    rows = [
-      { name: 'CryptoWhale', level: 88, totalXP: 142000, address: '0xWHALE' },
-      { name: 'DegenKing',   level: 72, totalXP: 98500,  address: '0xDEGEN' },
-      { name: 'BaseBuilder', level: 65, totalXP: 81200,  address: '0xBUILD' },
-      { name: 'GMfren',      level: 51, totalXP: 54300,  address: '0xGMFR' },
-      { name: 'DiamondHODL', level: 44, totalXP: 39800,  address: '0xDIAM' },
-    ];
-    if (AppState.character) rows.push({ name: AppState.character.name, level: AppState.character.level, totalXP: AppState.character.totalXP, address: me });
-  }
-  rows.sort((a,b) => (b.totalXP||0) - (a.totalXP||0));
-  box.innerHTML = rows.slice(0, 50).map((r, i) => {
-    const rank = i + 1;
-    const cls = rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
-    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
-    const isMe = me && r.address?.toLowerCase() === me;
-    const evo = XP.getEvolution(r.level || 1);
-    return `<div class="lb-row ${isMe?'me':''}">
-      <span class="lb-rank ${cls}">${medal}</span>
-      <span class="lb-emoji">${evo.emoji}</span>
-      <div class="lb-info"><div class="lb-name">${Utils.escape(r.name||'Anon')}${isMe?' (You)':''}</div>
-        <div class="lb-meta">Lv.${r.level||1} · ${evo.name}</div></div>
-      <span class="lb-xp">${Utils.shortNum(r.totalXP||0)} XP</span>
-    </div>`;
-  }).join('');
-}
-
-// ── REFERRAL ──
-function renderReferral() {
-  const box = $('tab-referral');
+function renderInvite() {
   const c = AppState.character;
-  const code = c ? Utils.generateReferralCode(c.owner) : 'BXP------';
+  if (!c) { $('connect-gate').classList.add('show'); return; }
+  $('connect-gate').classList.remove('show');
+  const code = Utils.generateReferralCode(c.owner);
   const used = LS.getSetting('ref_used', false);
   const invited = LS.getSetting('ref_invited', 0);
-  box.innerHTML = `
+  const evo = XP.getEvolution(c.level);
+
+  $('invite-body').innerHTML = `
     <div class="ref-card">
-      <div style="font-family:var(--font-display);font-weight:800;font-size:18px">Invite friends, earn XP 🎁</div>
-      <p style="color:var(--text-secondary);font-size:13px;margin-top:4px">You get <b style="color:var(--neon-green)">+200 XP</b> for every friend who joins with your code. They get <b style="color:var(--neon-green)">+200 XP</b> too!</p>
+      <div style="font-family:var(--font-display);font-weight:800;font-size:19px">Your referral code 🔗</div>
+      <p style="color:var(--text-secondary);font-size:13px;margin-top:4px">You get <b style="color:var(--neon-green)">+200 XP</b> for every friend who joins with your code — and they get <b style="color:var(--neon-green)">+200 XP</b> too!</p>
       <div class="ref-code-box">
         <span class="ref-code">${code}</span>
         <button class="btn btn--primary btn--sm" onclick="Utils.copy('${code}')">Copy</button>
@@ -120,16 +65,26 @@ function renderReferral() {
     </div>
 
     <div class="stat-grid" style="margin-bottom:18px">
-      <div class="stat-box"><div class="stat-val mono text-gradient-gold">${invited}</div><div class="stat-label">Invited</div></div>
+      <div class="stat-box"><div class="stat-val mono text-gradient-gold">${invited}</div><div class="stat-label">Friends invited</div></div>
       <div class="stat-box"><div class="stat-val mono text-gradient-gold">${invited*200}</div><div class="stat-label">Bonus XP</div></div>
-      <div class="stat-box"><div class="stat-val mono">${c?c.level:1}</div><div class="stat-label">Your level</div></div>
+      <div class="stat-box"><div class="stat-val mono">Lv.${c.level}</div><div class="stat-label">${evo.name}</div></div>
     </div>
 
-    <div class="section-header" style="margin-top:6px"><span class="section-title">Have a code?</span></div>
+    <div class="section-header" style="margin-top:6px"><span class="section-title">Got a friend's code?</span></div>
     <div class="card">
-      ${used ? '<p style="color:var(--neon-green);font-weight:600;text-align:center">✓ You already redeemed a referral code</p>' :
-      `<input class="input-field" id="ref-input" placeholder="Enter friend's code (BXP…)" maxlength="9" style="text-transform:uppercase;margin-bottom:10px">
-       <button class="btn btn--green btn--full" onclick="redeemRef()">Redeem +200 XP</button>`}
+      ${used
+        ? '<p style="color:var(--neon-green);font-weight:600;text-align:center">✓ You already redeemed a referral code</p>'
+        : `<input class="input-field" id="ref-input" placeholder="Enter code (BXP…)" maxlength="9" style="text-transform:uppercase;margin-bottom:10px">
+           <button class="btn btn--green btn--full" onclick="redeemRef()">Redeem +200 XP</button>`}
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:8px">How it works</div>
+      <div style="color:var(--text-secondary);font-size:13px;line-height:1.7">
+        1. Copy your code and share it with friends.<br>
+        2. They enter it on their first visit.<br>
+        3. You both instantly get +200 XP. No limit on how many you invite!
+      </div>
     </div>`;
 }
 
@@ -151,36 +106,9 @@ function redeemRef() {
   LS.setSetting('ref_used', true);
   XP.add(200, 'Referral bonus');
   Confetti.rain(80);
-  // optional: tell worker
   fetch(`${CONFIG.WORKER_URL}/referral`, { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ address: c.owner, code: val }) }).catch(()=>{});
-  renderReferral();
-}
-
-// ── ACTIVITY FEED ──
-function renderFeed() {
-  const box = $('tab-feed');
-  const demo = [
-    { e:'🚀', m:'DegenKing evolved to Degen!', t:'2m ago', xp:'+1000' },
-    { e:'🎲', m:'CryptoWhale hit the JACKPOT in Lucky Box', t:'8m ago', xp:'+2000' },
-    { e:'🔥', m:'GMfren reached a 30-day streak', t:'15m ago', xp:'+500' },
-    { e:'💎', m:'DiamondHODL bought the Diamond Shell', t:'22m ago', xp:'+500' },
-    { e:'👑', m:'BaseBuilder claimed the #3 rank', t:'34m ago', xp:'' },
-    { e:'🪐', m:"A new explorer entered Satoshi's Realm", t:'1h ago', xp:'+500' },
-  ];
-  const mine = LS.getSetting('my_activity', []);
-  const all = [...mine, ...demo].slice(0, 30);
-  box.innerHTML = all.map(a => `<div class="af-row">
-    <span class="af-avatar">${a.e}</span>
-    <div class="af-info"><div class="af-msg">${Utils.escape(a.m)}</div><div class="af-time">${a.t}</div></div>
-    ${a.xp?`<span class="af-xp">${a.xp}</span>`:''}
-  </div>`).join('');
-}
-
-function logActivity(emoji, msg, xp) {
-  const mine = LS.getSetting('my_activity', []);
-  mine.unshift({ e: emoji, m: msg, t: 'just now', xp: xp || '' });
-  LS.setSetting('my_activity', mine.slice(0, 10));
+  renderInvite();
 }
 
 function updateWalletUI() {
@@ -189,13 +117,12 @@ function updateWalletUI() {
   else { chip.classList.remove('connected'); $('wallet-addr').textContent='Connect'; $('wallet-bal').classList.add('hidden'); $('connect-gate').classList.add('show'); }
 }
 
-EventBus.on('character:loaded', () => switchTab(activeTab));
-EventBus.on('wallet:connected', () => { updateWalletUI(); switchTab(activeTab); });
+EventBus.on('character:loaded', renderInvite);
+EventBus.on('wallet:connected', () => { updateWalletUI(); renderInvite(); });
 EventBus.on('wallet:balance', updateWalletUI);
 EventBus.on('wallet:disconnected', () => { updateWalletUI(); $('connect-gate').classList.add('show'); });
-EventBus.on('character:levelup', d => { if (d.evolved) logActivity(d.evo.emoji, `You evolved to ${d.evo.name}!`, ''); });
+EventBus.on('xp:gained', renderInvite);
 
-renderLeaderboard();
 App.init('social');
 </script>
 </body>

@@ -33,19 +33,19 @@ const CONFIG = {
   LS_PREFIX:       'basexp_',
   KV_SYNC_INTERVAL: 60_000, // push character state to KV every 60s
 
-  // Evolution ladder
+  // Evolution ladder — coherent "crypto glow-up", tier-colored
   EVOLUTIONS: [
-    { level: 1,  emoji: '🥚', name: 'Egg',         desc: 'Cracking and trembling…' },
-    { level: 6,  emoji: '🐣', name: 'Hatchling',   desc: 'Tiny, curious, ready to grow!' },
-    { level: 12, emoji: '🐤', name: 'Chick',       desc: 'Chirping for more XP!' },
-    { level: 20, emoji: '🐱', name: 'Sprout',      desc: 'Energetic and playful!' },
-    { level: 30, emoji: '😎', name: 'Crypto Bro',  desc: 'Hoodie on, laptop open 💻' },
-    { level: 42, emoji: '🧙', name: 'Sage',        desc: 'Wields mysterious on-chain power ✨' },
-    { level: 55, emoji: '👑', name: 'Chad',        desc: 'Golden crown, flowing cape 🦸' },
-    { level: 68, emoji: '🚀', name: 'Degen',       desc: 'Rocket-fueled, neon-soaked 🌈' },
-    { level: 80, emoji: '💎', name: 'Diamond',     desc: 'Crystalline. Unbreakable. 💠' },
-    { level: 92, emoji: '⭐', name: 'Legend',      desc: 'A glowing aura surrounds it 🌟' },
-    { level: 100, emoji: '🌌', name: 'Satoshi',    desc: 'The final form. Ascended. 🛸' },
+    { level: 1,   emoji: '🥚', name: 'Egg',       desc: 'A mysterious egg appears on Base.',       color: '#8ea0c9', tier: 'common' },
+    { level: 5,   emoji: '🐣', name: 'Hatchling', desc: 'It hatched! GM, world 🌅',                color: '#2bd6ff', tier: 'common' },
+    { level: 11,  emoji: '🐥', name: 'Chick',     desc: 'Tiny but curious — learning the ropes.',  color: '#2bd6ff', tier: 'common' },
+    { level: 18,  emoji: '🐤', name: 'HODLer',    desc: 'Holding strong through every dip 💪',     color: '#2bff9e', tier: 'rare' },
+    { level: 27,  emoji: '😎', name: 'Trader',    desc: 'Charts on charts on charts 📈',           color: '#2bff9e', tier: 'rare' },
+    { level: 38,  emoji: '🤖', name: 'Builder',   desc: 'Shipping onchain, day and night 🛠️',      color: '#00ffea', tier: 'rare' },
+    { level: 50,  emoji: '🧙', name: 'Wizard',    desc: 'Casting onchain spells 🪄',               color: '#b76bff', tier: 'epic' },
+    { level: 63,  emoji: '🐳', name: 'Whale',     desc: 'Moves the market with a splash 🌊',       color: '#b76bff', tier: 'epic' },
+    { level: 77,  emoji: '🚀', name: 'Degen',     desc: 'Full send, no fear 🌈',                   color: '#ffc94d', tier: 'legendary' },
+    { level: 90,  emoji: '💎', name: 'Diamond',   desc: 'Hands of pure carbon 💠',                 color: '#ffc94d', tier: 'legendary' },
+    { level: 100, emoji: '🌌', name: 'Satoshi',   desc: 'Ascended. The final form. 🛸',            color: '#ff4d97', tier: 'mythic' },
   ],
 
   DIALOGS: {
@@ -61,7 +61,7 @@ const CONFIG = {
   },
 
   // Daily login reward ladder (XP) — index = streak day (capped/looped)
-  LOGIN_REWARDS: [50, 75, 100, 150, 200, 300, 500],
+  LOGIN_REWARDS: [40, 55, 70, 90, 120, 160, 250],
 };
 
 /* ════════════════════════════════════════════════════════════
@@ -71,38 +71,38 @@ const CONFIG = {
 const SHOP = {
   // ── Consumables (instant effect) ──
   consumables: [
-    { id: 'special_food', action: 'special_food', icon: '🍖', name: 'Feast Platter', desc: 'All needs +25 · +500 XP', xp: 500, badge: null },
-    { id: 'energy_drink', action: 'energy_drink', icon: '⚡', name: 'Energy Drink',  desc: 'Energy to 100% · +300 XP', xp: 300, badge: null },
-    { id: 'lucky_box',    action: 'lucky_box',    icon: '🎲', name: 'Lucky Box',     desc: 'Win 100–2000 XP!',        xp: null, badge: 'LUCK', badgeClass: '' },
-    { id: 'mega_box',     action: 'lucky_box',    icon: '🎁', name: 'Mega Box',      desc: 'Bigger odds, 100–2000 XP', xp: null, badge: 'HOT', badgeClass: 'paid-badge--hot' },
-    { id: 'wake_up',      action: 'wake_up',      icon: '☀️', name: 'Wake Up Call',  desc: 'Instantly wake your pet',  xp: 150, badge: null },
+    { id: 'special_food', action: 'special_food', icon: '🍖', name: 'Feast Platter', desc: 'All needs +25 · +250 XP', xp: 250, badge: null },
+    { id: 'energy_drink', action: 'energy_drink', icon: '⚡', name: 'Energy Drink',  desc: 'Energy to 100% · +120 XP', xp: 120, badge: null },
+    { id: 'lucky_box',    action: 'lucky_box',    icon: '🎲', name: 'Lucky Box',     desc: 'Win 80–500 XP!',          xp: null, badge: 'LUCK', badgeClass: '' },
+    { id: 'mega_box',     action: 'lucky_box',    icon: '🎁', name: 'Mega Box',      desc: 'Better odds · 150–800 XP', xp: null, badge: 'HOT', badgeClass: 'paid-badge--hot' },
+    { id: 'wake_up',      action: 'wake_up',      icon: '☀️', name: 'Wake Up Call',  desc: 'Instantly wake · +80 XP',  xp: 80, badge: null },
   ],
 
   // ── Boosts (timed buffs) ──
   boosts: [
     { id: 'xp_boost',   action: 'xp_boost', icon: '🚀', name: '2x XP — 24h', desc: 'Double all XP for 24 hours', xp: 0, badge: '24H', badgeClass: '' },
     { id: 'xp_boost_3', action: 'xp_boost', icon: '🌠', name: '2x XP — 72h', desc: 'Double XP, triple the time', xp: 0, badge: 'BEST', badgeClass: 'paid-badge--mythic', hours: 72 },
-    { id: 'freeze',     action: 'xp_boost', icon: '🧊', name: 'Need Freeze', desc: 'Needs stop decaying 24h',     xp: 100, badge: null, freeze: true },
+    { id: 'freeze',     action: 'xp_boost', icon: '🧊', name: 'Need Freeze', desc: 'Needs stop decaying 24h',     xp: 60, badge: null, freeze: true },
   ],
 
   // ── Costumes / skins (cosmetic, persistent) ──
   costumes: [
-    { id: 'cape',     action: 'costume', icon: '🦸', name: 'Hero Cape',     desc: 'Classic superhero drip',     xp: 200, rarity: 'common' },
-    { id: 'crown',    action: 'costume', icon: '👑', name: 'Golden Crown',  desc: 'Rule the leaderboard',       xp: 200, rarity: 'rare' },
-    { id: 'shades',   action: 'costume', icon: '🕶️', name: 'Cool Shades',   desc: 'Deal with it 😎',            xp: 200, rarity: 'common' },
-    { id: 'wizard',   action: 'costume', icon: '🎩', name: 'Wizard Hat',    desc: 'Cast on-chain spells',       xp: 200, rarity: 'rare' },
-    { id: 'halo',     action: 'costume', icon: '😇', name: 'Angel Halo',    desc: 'Pure & radiant',             xp: 250, rarity: 'epic' },
-    { id: 'devil',    action: 'costume', icon: '😈', name: 'Devil Horns',   desc: 'A little degen energy',      xp: 250, rarity: 'epic' },
-    { id: 'rainbow',  action: 'costume', icon: '🌈', name: 'Rainbow Aura',  desc: 'Glowing prismatic shell',    xp: 300, rarity: 'epic' },
-    { id: 'galaxy',   action: 'costume', icon: '🌌', name: 'Galaxy Skin',   desc: 'Cosmos in your shell',       xp: 400, rarity: 'legendary' },
-    { id: 'diamond',  action: 'costume', icon: '💎', name: 'Diamond Shell', desc: 'Unbreakable flex',           xp: 500, rarity: 'legendary' },
-    { id: 'flame',    action: 'costume', icon: '🔥', name: 'Flame Coat',    desc: 'Always on fire',             xp: 300, rarity: 'epic' },
+    { id: 'cape',     action: 'costume', icon: '🦸', name: 'Hero Cape',     desc: 'Classic superhero drip',     xp: 80,  rarity: 'common' },
+    { id: 'crown',    action: 'costume', icon: '👑', name: 'Golden Crown',  desc: 'Wear it like royalty',       xp: 100, rarity: 'rare' },
+    { id: 'shades',   action: 'costume', icon: '🕶️', name: 'Cool Shades',   desc: 'Deal with it 😎',            xp: 80,  rarity: 'common' },
+    { id: 'wizard',   action: 'costume', icon: '🎩', name: 'Wizard Hat',    desc: 'Cast on-chain spells',       xp: 100, rarity: 'rare' },
+    { id: 'halo',     action: 'costume', icon: '😇', name: 'Angel Halo',    desc: 'Pure & radiant',             xp: 140, rarity: 'epic' },
+    { id: 'devil',    action: 'costume', icon: '😈', name: 'Devil Horns',   desc: 'A little degen energy',      xp: 140, rarity: 'epic' },
+    { id: 'rainbow',  action: 'costume', icon: '🌈', name: 'Rainbow Aura',  desc: 'Glowing prismatic shell',    xp: 140, rarity: 'epic' },
+    { id: 'galaxy',   action: 'costume', icon: '🌌', name: 'Galaxy Skin',   desc: 'Cosmos in your shell',       xp: 200, rarity: 'legendary' },
+    { id: 'diamond',  action: 'costume', icon: '💎', name: 'Diamond Shell', desc: 'Unbreakable flex',           xp: 200, rarity: 'legendary' },
+    { id: 'flame',    action: 'costume', icon: '🔥', name: 'Flame Coat',    desc: 'Always on fire',             xp: 140, rarity: 'epic' },
   ],
 
   // ── Mini-game power-ups ──
   gameBoosts: [
-    { id: 'extra_life',  action: 'energy_drink', icon: '❤️', name: 'Extra Lives',   desc: '+3 lives in Coin Catch',  xp: 100 },
-    { id: 'slow_time',   action: 'energy_drink', icon: '⏳', name: 'Slow Motion',    desc: 'Slows the next game 30%', xp: 100 },
+    { id: 'extra_life',  action: 'energy_drink', icon: '❤️', name: 'Extra Lives',   desc: '+3 lives in Coin Catch',  xp: 60 },
+    { id: 'slow_time',   action: 'energy_drink', icon: '⏳', name: 'Slow Motion',    desc: 'Slows the next game 30%', xp: 60 },
     { id: 'double_score',action: 'xp_boost',     icon: '✖️', name: '2x Game Score',  desc: 'Double XP from games 24h',xp: 0, badge: '2x' },
   ],
 
@@ -371,7 +371,7 @@ const X402 = {
    XP SYSTEM
    ════════════════════════════════════════════════════════════ */
 const XP = {
-  xpRequired(level) { return Math.floor(100 * Math.pow(1.14, level - 1)); },
+  xpRequired(level) { return Math.floor(280 * Math.pow(1.10, level - 1)); },
 
   getEvolution(level) {
     let cur = CONFIG.EVOLUTIONS[0];
@@ -393,7 +393,7 @@ const XP = {
     LS.save(char);
     EventBus.emit('xp:gained', { amount: finalXP, reason, boosted, level: char.level });
     if (amount > 0) Toast.show(`+${finalXP} XP${boosted ? ' 🚀2x' : ''}${reason ? ' · ' + reason : ''}`, 'xp', '⭐');
-    KVSync.pushLeaderboard(char);
+
   },
 
   _onLevelUp(newLevel) {
@@ -428,7 +428,7 @@ const Character = {
     char.lastSeen = Date.now();
     LS.save(char);
     this.startDecay(); this._startKVSync(); this._scheduleDialog();
-    KVSync.push(char); KVSync.pushLeaderboard(char);
+    KVSync.push(char);
     EventBus.emit('character:loaded', char);
     return char;
   },
@@ -551,6 +551,20 @@ const Character = {
 const Activities = {
   _rand(a) { return a[Math.floor(Math.random() * a.length)]; },
 
+  // Weighted lucky-box XP. Premium boxes (mega/whale/cosmic) roll higher.
+  _rollLuckyXP(itemId) {
+    const premium = ['mega_box', 'whale_chest', 'cosmic_gift'].includes(itemId);
+    const r = Math.random();
+    if (premium) {
+      if (r < 0.45) return 150 + Math.floor(Math.random() * 150); // 150–300
+      if (r < 0.85) return 300 + Math.floor(Math.random() * 200); // 300–500
+      return 500 + Math.floor(Math.random() * 300);               // 500–800 jackpot
+    }
+    if (r < 0.55) return 80 + Math.floor(Math.random() * 70);     // 80–150
+    if (r < 0.90) return 150 + Math.floor(Math.random() * 150);   // 150–300
+    return 300 + Math.floor(Math.random() * 200);                 // 300–500 jackpot
+  },
+
   // ── Free daily ──
   async gm() {
     const c = AppState.character; if (!c) return;
@@ -616,11 +630,11 @@ const Activities = {
       const c = AppState.character;
 
       // Apply effects per item
-      if (item.id === 'special_food') { Character.fillAll(25); XP.add(500, 'Feast'); }
+      if (item.id === 'special_food') { Character.fillAll(25); XP.add(250, 'Feast'); }
       else if (item.id === 'energy_drink' || item.id === 'extra_life') { Character.fillNeed('energy', 100); XP.add(item.xp || 0, item.name); }
       else if (item.id === 'slow_time') { LS.setSetting('game_slowmo', true); XP.add(item.xp || 0, item.name); }
       else if (item.action === 'lucky_box') {
-        const won = result.xpReward || (100 + Math.floor(Math.random() * 1900));
+        const won = result.xpReward || Activities._rollLuckyXP(item.id);
         XP.add(won, `${item.name} 🎲`);
         LuckyReveal.show(item, won);
       }
@@ -630,12 +644,12 @@ const Activities = {
         Toast.show(`${hrs}h 2x XP active! 🚀`, 'success', '⚡');
       }
       else if (item.id === 'xp_boost_3') { c.xpBoostUntil = Date.now() + 72 * 3600 * 1000; Toast.show('72h 2x XP active! 🌠', 'success', '⚡'); }
-      else if (item.id === 'freeze') { c.freezeUntil = Date.now() + 24 * 3600 * 1000; XP.add(100, 'Freeze'); Toast.show('Needs frozen 24h 🧊', 'success', '🧊'); }
-      else if (item.id === 'wake_up') { c.isSleeping = false; XP.add(150, 'Wake up'); }
+      else if (item.id === 'freeze') { c.freezeUntil = Date.now() + 24 * 3600 * 1000; XP.add(60, 'Freeze'); Toast.show('Needs frozen 24h 🧊', 'success', '🧊'); }
+      else if (item.id === 'wake_up') { c.isSleeping = false; XP.add(80, 'Wake up'); }
       else if (item.action === 'costume') {
         c.costume = item.icon;
         if (!c.ownedCostumes.includes(item.id)) c.ownedCostumes.push(item.id);
-        XP.add(item.xp || 200, item.name);
+        XP.add(item.xp || 80, item.name);
         Toast.show(`${item.name} equipped! ${item.icon}`, 'success', '👗');
       }
 
@@ -720,8 +734,8 @@ const Evolution = {
    ════════════════════════════════════════════════════════════ */
 const LuckyReveal = {
   show(item, xp) {
-    const tier = xp >= 1500 ? { label: 'JACKPOT!', cls: 'paid-badge--mythic', conf: 180 }
-      : xp >= 800 ? { label: 'BIG WIN!', cls: 'paid-badge--hot', conf: 120 }
+    const tier = xp >= 500 ? { label: 'JACKPOT!', cls: 'paid-badge--mythic', conf: 180 }
+      : xp >= 300 ? { label: 'BIG WIN!', cls: 'paid-badge--hot', conf: 120 }
       : { label: 'Nice!', cls: '', conf: 60 };
     let o = document.getElementById('lucky-overlay');
     if (!o) { o = document.createElement('div'); o.id = 'lucky-overlay'; o.className = 'evolution-overlay'; document.body.appendChild(o); }
@@ -803,7 +817,7 @@ const Nav = {
     { page: 'shop',   icon: '🛒', label: 'Shop',   href: 'shop.html'   },
     { page: 'games',  icon: '🎮', label: 'Games',  href: 'games.html'  },
     { page: 'world',  icon: '🗺️', label: 'World',  href: 'world.html'  },
-    { page: 'social', icon: '👥', label: 'Social', href: 'social.html' },
+    { page: 'social', icon: '🎁', label: 'Invite', href: 'social.html' },
   ],
   render(cur) {
     const nav = document.querySelector('.bottom-nav'); if (!nav) return;

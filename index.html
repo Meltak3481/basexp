@@ -141,6 +141,25 @@ function renderQuickShop() {
 }
 
 // Full UI render
+function applyTierLook(evo) {
+  const col = evo.color || '#2bd6ff';
+  // Emoji glow follows the tier color
+  DOM.emoji.style.filter = `drop-shadow(0 6px 22px ${col}cc)`;
+  // Character ring tint
+  const ring = document.querySelector('.char-ring');
+  if (ring) ring.style.background = `conic-gradient(from 90deg, ${col}, #b76bff, #2bff9e, ${col})`;
+  // Evolution tag: mythic gets the animated rainbow gradient, others a solid tier color
+  if (evo.tier === 'mythic') {
+    DOM.evoTag.style.background = 'var(--grad-mythic)';
+    DOM.evoTag.style.backgroundSize = '200% auto';
+    DOM.evoTag.style.color = '#fff';
+  } else {
+    DOM.evoTag.style.background = col;
+    DOM.evoTag.style.color = '#04060f';
+  }
+  DOM.evoTag.style.boxShadow = `0 0 18px ${col}88`;
+}
+
 function render() {
   const c = AppState.character;
   if (!c) { DOM.gate.classList.add('show'); return; }
@@ -149,6 +168,8 @@ function render() {
   DOM.emoji.textContent = c.costume || evo.emoji;
   DOM.name.textContent = c.name;
   DOM.evoTag.textContent = evo.name;
+  // Tier-colored glow & evolution tag
+  applyTierLook(evo);
   DOM.lvl.textContent = 'Lv.' + c.level;
   const need = XP.xpRequired(c.level);
   DOM.xpFill.style.width = Math.min(100, (c.xp / need) * 100) + '%';
