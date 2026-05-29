@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#04060f">
+<title>BaseXP — Shop</title>
+<meta name="base:app_id" content="6a18a84807babdffa06b0f05" />
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <header class="app-header">
+    <div class="brand"><div class="brand-logo">🛒</div><div class="brand-name">Base<b>XP</b></div></div>
+    <div class="wallet-chip" id="wallet-chip" onclick="onWalletChip()">
+      <div class="wallet-dot" id="wallet-dot"></div>
+      <span id="wallet-addr">Connect</span>
+      <span class="wallet-balance hidden" id="wallet-bal"></span>
+    </div>
+  </header>
+
+  <div class="shop-hero reveal">
+    <h2 class="text-gradient-blue">Power Shop 🛍️</h2>
+    <p>Every item costs <b style="color:#6ea8ff">0.05 USDC</b> on Base — instant, gas-free via x402.</p>
+    <div class="bal" id="hero-bal">Connect wallet to see balance</div>
+  </div>
+
+  <div id="shop-body"></div>
+
+  <div class="page-bottom"></div>
+</div>
+
+<nav class="bottom-nav" style="display:none;"></nav>
+<div class="connect-gate" id="connect-gate">
+  <div class="gate-egg">🛒</div>
+  <div class="gate-title text-gradient-blue">Unlock the Shop</div>
+  <div class="gate-sub">Connect your wallet to buy power-ups, costumes, boosts and mystery boxes.</div>
+  <button class="btn btn--primary btn--lg btn--shine" onclick="WalletModal.show()">🔗 Connect Wallet</button>
+</div>
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<script src="shared.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+function onWalletChip() { if (AppState.wallet.connected) { if (confirm('Disconnect wallet?')) Wallet.disconnect(); } else WalletModal.show(); }
+
+const CATS = [
+  { key: 'consumables', title: 'Instant Boosts', icon: '⚡', pill: 'CONSUMABLE' },
+  { key: 'boosts',      title: 'XP Multipliers', icon: '🚀', pill: 'TIMED' },
+  { key: 'costumes',    title: 'Costumes & Skins', icon: '👗', pill: 'COSMETIC' },
+  { key: 'gameBoosts',  title: 'Game Power-Ups', icon: '🎮', pill: 'GAMES' },
+  { key: 'mystery',     title: 'Mystery Tier', icon: '🔮', pill: 'SURPRISE' },
+];
+
+function card(it) {
+  const c = AppState.character;
+  const owned = it.action === 'costume' && c?.ownedCostumes?.includes(it.id);
+  const equipped = c?.costume === it.icon;
+  const rarity = it.rarity ? `<span class="rarity-tag" style="background:${SHOP.rarityColor[it.rarity]}22;color:${SHOP.rarityColor[it.rarity]};border:1px solid ${SHOP.rarityColor[it.rarity]}55;">${it.rarity}</span>` : '';
+  const badge = it.badge ? `<div class="paid-badge ${it.badgeClass||''}">${it.badge}</div>` : '';
+  let action, price;
+  if (owned) {
+    action = `Activities.${equipped ? 'unequipCostume()' : `equipCostume('${it.id}')`}; setTimeout(renderShop,50)`;
+    price = equipped ? '✓ Equipped — tap to remove' : '✓ Owned — tap to equip';
+  } else {
+    action = `Activities.buy('${it.id}').then(()=>setTimeout(renderShop,300))`;
+    price = '💲 0.05 USDC';
+  }
+  return `<div class="shop-item ${owned?'owned':''}" onclick="${action}">${rarity}${owned?'':badge}
+    <span class="ico">${it.icon}</span><span class="nm">${it.name}</span>
+    <span class="ds">${it.desc}</span><span class="pr">${price}</span></div>`;
+}
+
+function renderShop() {
+  const c = AppState.character;
+  if (!c) { $('connect-gate').classList.add('show'); return; }
+  $('connect-gate').classList.remove('show');
+  $('shop-body').innerHTML = CATS.map(cat => `
+    <div class="shop-cat-title">${cat.icon} ${cat.title} <span class="pill">${cat.pill}</span></div>
+    <div class="shop-grid">${SHOP[cat.key].map(card).join('')}</div>
+  `).join('');
+}
+
+function updateWalletUI() {
+  const w = AppState.wallet, chip = $('wallet-chip');
+  if (w.connected) {
+    chip.classList.add('connected');
+    $('wallet-addr').textContent = Wallet.shortAddr(w.address);
+    $('wallet-bal').classList.remove('hidden');
+    $('wallet-bal').textContent = Wallet.formatUSDC(w.usdcBalance) + ' USDC';
+    $('hero-bal').textContent = '💰 Balance: ' + Wallet.formatUSDC(w.usdcBalance) + ' USDC';
+  } else {
+    chip.classList.remove('connected');
+    $('wallet-addr').textContent = 'Connect';
+    $('wallet-bal').classList.add('hidden');
+    $('hero-bal').textContent = 'Connect wallet to see balance';
+  }
+}
+
+EventBus.on('character:loaded', renderShop);
+EventBus.on('wallet:connected', () => { updateWalletUI(); renderShop(); });
+EventBus.on('wallet:balance', updateWalletUI);
+EventBus.on('wallet:disconnected', () => { updateWalletUI(); $('connect-gate').classList.add('show'); });
+EventBus.on('activity:purchase', renderShop);
+
+App.init('shop');
+</script>
+</body>
+</html>

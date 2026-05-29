@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#04060f">
+<title>BaseXP — World</title>
+<meta name="base:app_id" content="6a18a84807babdffa06b0f05" />
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <header class="app-header">
+    <div class="brand"><div class="brand-logo">🗺️</div><div class="brand-name">Base<b>XP</b></div></div>
+    <div class="wallet-chip" id="wallet-chip" onclick="onWalletChip()">
+      <div class="wallet-dot" id="wallet-dot"></div><span id="wallet-addr">Connect</span>
+      <span class="wallet-balance hidden" id="wallet-bal"></span>
+    </div>
+  </header>
+
+  <h1 class="page-title reveal">Explore the World 🌍</h1>
+  <p class="page-sub reveal">Unlock new zones as you level up. Each visit rewards XP — but you can only claim once per day per zone.</p>
+
+  <div class="card reveal" style="margin-bottom:18px;display:flex;align-items:center;gap:14px;">
+    <div style="font-size:34px" id="world-emoji">🥚</div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:15px"><span id="world-lvl">Lv.1</span> · <span id="world-evo">Egg</span></div>
+      <div style="font-size:12px;color:var(--text-secondary)" id="world-zones-unlocked">1 zone unlocked</div>
+    </div>
+  </div>
+
+  <div class="world-map reveal" id="world-map"></div>
+  <div class="page-bottom"></div>
+</div>
+
+<nav class="bottom-nav" style="display:none;"></nav>
+<div class="connect-gate" id="connect-gate">
+  <div class="gate-egg">🗺️</div><div class="gate-title text-gradient-blue">Discover Zones</div>
+  <div class="gate-sub">Connect your wallet to explore the BaseXP world and earn XP from every region.</div>
+  <button class="btn btn--primary btn--lg btn--shine" onclick="WalletModal.show()">🔗 Connect Wallet</button>
+</div>
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<script src="shared.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+function onWalletChip() { if (AppState.wallet.connected) { if (confirm('Disconnect wallet?')) Wallet.disconnect(); } else WalletModal.show(); }
+
+const ZONES = [
+  { id: 'meadow',   icon: '🌱', name: 'Genesis Meadow',  desc: 'Where every pet begins its journey.',       lvl: 1,  xp: 40 },
+  { id: 'market',   icon: '🏪', name: 'Trader Bazaar',   desc: 'Bustling market of degens and dreamers.',     lvl: 5,  xp: 60 },
+  { id: 'forest',   icon: '🌲', name: 'Block Forest',    desc: 'Ancient trees humming with hashpower.',       lvl: 12, xp: 90 },
+  { id: 'volcano',  icon: '🌋', name: 'Gas Volcano',     desc: 'Molten fees and fiery rewards.',              lvl: 22, xp: 130 },
+  { id: 'ocean',    icon: '🌊', name: 'Liquidity Ocean', desc: 'Deep pools where whales roam.',               lvl: 35, xp: 180 },
+  { id: 'city',     icon: '🌆', name: 'Neon Metropolis', desc: 'The on-chain city that never sleeps.',        lvl: 50, xp: 250 },
+  { id: 'space',    icon: '🪐', name: 'Orbital Station', desc: 'Floating high above the chain.',              lvl: 70, xp: 350 },
+  { id: 'cosmos',   icon: '🌌', name: "Satoshi's Realm", desc: 'The legendary final frontier.',              lvl: 100, xp: 500 },
+];
+
+function visitedToday(id) {
+  const today = new Date().toISOString().split('T')[0];
+  return LS.getSetting('zone_' + id, null) === today;
+}
+
+function visit(zone) {
+  const c = AppState.character; if (!c) return;
+  if (c.level < zone.lvl) { Toast.show(`Reach Lv.${zone.lvl} to unlock ${zone.name}`, 'warning', '🔒'); return; }
+  if (visitedToday(zone.id)) { Toast.show('Already visited today — come back tomorrow!', 'warning', '⏰'); return; }
+  LS.setSetting('zone_' + zone.id, new Date().toISOString().split('T')[0]);
+  c.stats.friendsVisited = c.stats.friendsVisited || 0;
+  XP.add(zone.xp, 'Visited ' + zone.name);
+  Character.fillNeed('happy', 15);
+  Confetti.rain(50); Utils.vibrate([30,20,40]);
+  renderWorld();
+}
+
+function renderWorld() {
+  const c = AppState.character;
+  if (!c) { $('connect-gate').classList.add('show'); return; }
+  $('connect-gate').classList.remove('show');
+  const evo = XP.getEvolution(c.level);
+  $('world-emoji').textContent = c.costume || evo.emoji;
+  $('world-lvl').textContent = 'Lv.' + c.level;
+  $('world-evo').textContent = evo.name;
+  const unlocked = ZONES.filter(z => c.level >= z.lvl).length;
+  $('world-zones-unlocked').textContent = `${unlocked}/${ZONES.length} zones unlocked`;
+
+  $('world-map').innerHTML = ZONES.map(z => {
+    const locked = c.level < z.lvl;
+    const done = visitedToday(z.id);
+    // progress toward unlock
+    const prevLvl = 1; const prog = locked ? Math.min(100, (c.level / z.lvl) * 100) : 100;
+    return `<div class="world-zone ${locked?'locked':''}" onclick='visitZone("${z.id}")'>
+      <div class="zhead">
+        <span class="zico">${z.icon}</span>
+        <div style="flex:1">
+          <div class="ztitle">${z.name}</div>
+          <div class="zdesc">${z.desc}</div>
+        </div>
+        <span class="zlock">${locked ? '🔒 Lv.'+z.lvl : (done ? '✓ Today' : '+'+z.xp+' XP')}</span>
+      </div>
+      ${locked ? `<div class="zprog"><div class="zprog-fill" style="width:${prog}%"></div></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+window.visitZone = id => { const z = ZONES.find(x => x.id === id); if (z) visit(z); };
+
+function updateWalletUI() {
+  const w = AppState.wallet, chip = $('wallet-chip');
+  if (w.connected) { chip.classList.add('connected'); $('wallet-addr').textContent = Wallet.shortAddr(w.address); $('wallet-bal').classList.remove('hidden'); $('wallet-bal').textContent = Wallet.formatUSDC(w.usdcBalance)+' USDC'; }
+  else { chip.classList.remove('connected'); $('wallet-addr').textContent='Connect'; $('wallet-bal').classList.add('hidden'); $('connect-gate').classList.add('show'); }
+}
+
+EventBus.on('character:loaded', renderWorld);
+EventBus.on('xp:gained', renderWorld);
+EventBus.on('character:levelup', renderWorld);
+EventBus.on('wallet:connected', () => { updateWalletUI(); renderWorld(); });
+EventBus.on('wallet:balance', updateWalletUI);
+EventBus.on('wallet:disconnected', () => { updateWalletUI(); $('connect-gate').classList.add('show'); });
+
+App.init('world');
+</script>
+</body>
+</html>

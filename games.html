@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#04060f">
+<title>BaseXP — Games</title>
+<meta name="base:app_id" content="6a18a84807babdffa06b0f05" />
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app-wrapper">
+  <header class="app-header">
+    <div class="brand"><div class="brand-logo">🎮</div><div class="brand-name">Base<b>XP</b></div></div>
+    <div class="wallet-chip" id="wallet-chip" onclick="onWalletChip()">
+      <div class="wallet-dot" id="wallet-dot"></div><span id="wallet-addr">Connect</span>
+      <span class="wallet-balance hidden" id="wallet-bal"></span>
+    </div>
+  </header>
+
+  <h1 class="page-title reveal">Arcade 🕹️</h1>
+  <p class="page-sub reveal">Play to earn XP. Beat your high score. New plays daily!</p>
+
+  <div class="game-grid reveal">
+    <div class="game-card" onclick="Games.open('coins')"><span class="gbest" id="best-coins"></span><span class="gico">🪙</span><span class="gname">Coin Catch</span><span class="gxp">up to +100 XP</span></div>
+    <div class="game-card" onclick="Games.open('quiz')"><span class="gbest" id="best-quiz"></span><span class="gico">❓</span><span class="gname">Crypto Quiz</span><span class="gxp">up to +150 XP</span></div>
+    <div class="game-card" onclick="Games.open('memory')"><span class="gbest" id="best-memory"></span><span class="gico">🧠</span><span class="gname">Memory</span><span class="gxp">up to +120 XP</span></div>
+    <div class="game-card" onclick="Games.open('reaction')"><span class="gbest" id="best-reaction"></span><span class="gico">⚡</span><span class="gname">Reaction</span><span class="gxp">up to +90 XP</span></div>
+  </div>
+
+  <div class="section-header reveal"><span class="section-title">Today's Plays</span></div>
+  <div class="stat-grid reveal">
+    <div class="stat-box"><div class="stat-val mono" id="plays-today">0</div><div class="stat-label">Games</div></div>
+    <div class="stat-box"><div class="stat-val mono text-gradient-gold" id="xp-today">0</div><div class="stat-label">XP earned</div></div>
+    <div class="stat-box"><div class="stat-val mono" id="total-plays">0</div><div class="stat-label">All time</div></div>
+  </div>
+
+  <div class="page-bottom"></div>
+</div>
+
+<!-- GAME MODAL -->
+<div class="game-modal" id="game-modal">
+  <div class="game-panel">
+    <div class="game-head"><span class="gt" id="g-title">Game</span><span class="game-close" onclick="Games.close()">×</span></div>
+    <div id="g-body"></div>
+  </div>
+</div>
+
+<nav class="bottom-nav" style="display:none;"></nav>
+<div class="connect-gate" id="connect-gate">
+  <div class="gate-egg">🎮</div><div class="gate-title text-gradient-blue">Play & Earn</div>
+  <div class="gate-sub">Connect your wallet to play mini-games and earn XP for your pet.</div>
+  <button class="btn btn--primary btn--lg btn--shine" onclick="WalletModal.show()">🔗 Connect Wallet</button>
+</div>
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<script src="shared.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+function onWalletChip() { if (AppState.wallet.connected) { if (confirm('Disconnect wallet?')) Wallet.disconnect(); } else WalletModal.show(); }
+
+const Games = {
+  current: null, raf: null,
+
+  open(g) {
+    if (!AppState.wallet.connected) { WalletModal.show(); return; }
+    this.current = g;
+    $('game-modal').classList.add('open');
+    if (g === 'coins') this.coins();
+    if (g === 'quiz') this.quiz();
+    if (g === 'memory') this.memory();
+    if (g === 'reaction') this.reaction();
+  },
+  close() {
+    $('game-modal').classList.remove('open');
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.current = null;
+  },
+  finish(game, score, xp) {
+    const c = AppState.character;
+    if (c) { c.stats.gamesPlayed++; c.stats.totalPlays++; }
+    const slowmo = LS.getSetting('game_slowmo', false);
+    if (slowmo) LS.setSetting('game_slowmo', false);
+    // best score
+    const best = LS.getSetting('best_' + game, 0);
+    const isBest = score > best;
+    if (isBest) LS.setSetting('best_' + game, score);
+    // today tally
+    const today = new Date().toISOString().split('T')[0];
+    const tally = LS.getSetting('game_tally', {});
+    if (tally.date !== today) { tally.date = today; tally.plays = 0; tally.xp = 0; }
+    tally.plays++; tally.xp += xp;
+    LS.setSetting('game_tally', tally);
+    XP.add(xp, game + ' game');
+    renderStats();
+    return isBest;
+  },
+
+  gameOverHTML(emoji, title, scoreText, xp, isBest, retry) {
+    return `<div class="game-over">
+      <div style="font-size:60px">${emoji}</div>
+      <div class="go-title">${title}</div>
+      <div class="go-score mono">${scoreText}</div>
+      ${isBest ? '<div style="color:var(--neon-yellow);font-weight:700;margin-bottom:6px">🏆 New best!</div>' : ''}
+      <div style="color:var(--neon-green);font-family:var(--font-mono);font-weight:800;font-size:18px">+${xp} XP</div>
+      <div class="flex gap-sm" style="margin-top:18px">
+        <button class="btn btn--ghost btn--full" onclick="Games.close()">Done</button>
+        <button class="btn btn--primary btn--full" onclick="Games.${retry}()">Play again</button>
+      </div></div>`;
+  },
+
+  // ── COIN CATCH (canvas) ──
+  coins() {
+    $('g-title').textContent = '🪙 Coin Catch';
+    $('g-body').innerHTML = `<div class="score-display"><span id="cc-score">0</span> · ❤️<span id="cc-lives">3</span> · <span id="cc-time">30</span>s</div>
+      <canvas id="game-canvas" width="380" height="420"></canvas>
+      <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:8px">Drag to catch coins · avoid 💣</p>`;
+    const cv = $('game-canvas'), ctx = cv.getContext('2d');
+    const slow = LS.getSetting('game_slowmo', false);
+    let score = 0, lives = 3, time = 30, paddleX = cv.width/2, items = [], spawnT = 0, last = performance.now(), running = true;
+    const speedMul = slow ? 0.7 : 1;
+    const move = e => { const r = cv.getBoundingClientRect(); const x = (e.touches?e.touches[0].clientX:e.clientX) - r.left; paddleX = Math.max(30, Math.min(cv.width-30, x * (cv.width/r.width))); };
+    cv.addEventListener('mousemove', move); cv.addEventListener('touchmove', e => { e.preventDefault(); move(e); }, {passive:false});
+    const timer = setInterval(() => { if (--time <= 0) { clearInterval(timer); running = false; } $('cc-time').textContent = Math.max(0,time); }, 1000);
+
+    const loop = now => {
+      const dt = Math.min(50, now - last); last = now;
+      ctx.clearRect(0,0,cv.width,cv.height);
+      // bg grid
+      ctx.strokeStyle = 'rgba(43,214,255,0.06)'; ctx.lineWidth = 1;
+      for (let i=0;i<cv.width;i+=38){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,cv.height);ctx.stroke();}
+      spawnT += dt;
+      if (spawnT > 650/speedMul) { spawnT = 0;
+        const bomb = Math.random() < 0.18;
+        items.push({ x: 30+Math.random()*(cv.width-60), y:-20, v:(2.4+Math.random()*1.8+(30-time)*0.06)*speedMul, bomb, gold: !bomb && Math.random()<0.16 });
+      }
+      for (let i=items.length-1;i>=0;i--){ const it=items[i]; it.y += it.v*dt/16;
+        ctx.font='28px serif'; ctx.fillText(it.bomb?'💣':(it.gold?'🪙':'🟡'), it.x-14, it.y);
+        if (it.y > cv.height-44 && it.y < cv.height-8 && Math.abs(it.x-paddleX) < 38) {
+          if (it.bomb) { lives--; $('cc-lives').textContent=lives; Utils.vibrate([60]); if(lives<=0) running=false; }
+          else { score += it.gold?5:1; $('cc-score').textContent=score; }
+          items.splice(i,1);
+        } else if (it.y > cv.height) items.splice(i,1);
+      }
+      // paddle
+      ctx.font='34px serif'; ctx.fillText('🧺', paddleX-18, cv.height-8);
+      if (running) this.raf = requestAnimationFrame(loop);
+      else { clearInterval(timer);
+        const xp = Math.min(100, score*3);
+        const isBest = this.finish('coins', score, xp);
+        $('g-body').innerHTML = this.gameOverHTML('🪙','Game Over!', score+' coins', xp, isBest, 'coins');
+      }
+    };
+    this.raf = requestAnimationFrame(loop);
+  },
+
+  // ── QUIZ ──
+  quiz() {
+    $('g-title').textContent = '❓ Crypto Quiz';
+    const QS = [
+      { q: 'BaseXP runs on which network?', o: ['Base','Solana','Tron','Sui'], a: 0 },
+      { q: 'What does "GM" mean in crypto?', o: ['Good Money','Good Morning','Gas Multiplier','Great Mint'], a: 1 },
+      { q: 'Which stablecoin powers BaseXP payments?', o: ['DAI','USDT','USDC','FRAX'], a: 2 },
+      { q: 'What is "WAGMI"?', o: ["We're All Gonna Make It",'Wallet Auth','Web3 API','Wrapped Gas'], a: 0 },
+      { q: 'A "diamond hands" investor…', o: ['Sells fast','Holds firmly','Day trades','Stakes only'], a: 1 },
+      { q: 'Base is built by which company?', o: ['Binance','Kraken','Coinbase','OKX'], a: 2 },
+      { q: 'What does x402 enable?', o: ['NFT mint','Gasless micro-payments','Bridging','Staking'], a: 1 },
+    ];
+    const picks = QS.sort(()=>Math.random()-0.5).slice(0,5);
+    let i = 0, correct = 0;
+    const showQ = () => {
+      if (i >= picks.length) {
+        const xp = correct*30; const isBest = this.finish('quiz', correct, xp);
+        $('g-body').innerHTML = this.gameOverHTML('🧠', correct>=4?'Genius!':'Nice try!', correct+'/5 correct', xp, isBest, 'quiz');
+        return;
+      }
+      const cur = picks[i];
+      $('g-body').innerHTML = `<div class="score-display mono" style="font-size:16px;color:var(--text-secondary)">Question ${i+1}/5</div>
+        <div class="quiz-q">${cur.q}</div>${cur.o.map((o,idx)=>`<div class="quiz-opt" data-idx="${idx}">${o}</div>`).join('')}`;
+      $('g-body').querySelectorAll('.quiz-opt').forEach(el => el.onclick = () => {
+        const idx = +el.dataset.idx;
+        $('g-body').querySelectorAll('.quiz-opt').forEach(x=>x.style.pointerEvents='none');
+        if (idx === cur.a) { el.classList.add('correct'); correct++; Utils.vibrate([20]); }
+        else { el.classList.add('wrong'); $('g-body').querySelectorAll('.quiz-opt')[cur.a].classList.add('correct'); }
+        i++; setTimeout(showQ, 750);
+      });
+    };
+    showQ();
+  },
+
+  // ── MEMORY ──
+  memory() {
+    $('g-title').textContent = '🧠 Memory Match';
+    const emojis = ['🥚','🚀','💎','👑','🔥','🌌','⚡','🎲'];
+    const deck = [...emojis, ...emojis].sort(()=>Math.random()-0.5);
+    let flipped = [], matched = 0, moves = 0, lock = false;
+    const start = Date.now();
+    $('g-body').innerHTML = `<div class="score-display mono" style="font-size:16px"><span id="mem-moves">0</span> moves</div>
+      <div class="mem-grid" id="mem-grid">${deck.map((e,idx)=>`<div class="mem-cell" data-idx="${idx}" data-e="${e}">?</div>`).join('')}</div>`;
+    $('mem-grid').querySelectorAll('.mem-cell').forEach(cell => cell.onclick = () => {
+      if (lock || cell.classList.contains('flipped') || cell.classList.contains('matched')) return;
+      cell.classList.add('flipped'); cell.textContent = cell.dataset.e; flipped.push(cell);
+      if (flipped.length === 2) {
+        moves++; $('mem-moves').textContent = moves; lock = true;
+        const [a,b] = flipped;
+        if (a.dataset.e === b.dataset.e) {
+          setTimeout(()=>{ a.classList.add('matched'); b.classList.add('matched'); flipped=[]; lock=false; matched++;
+            if (matched === emojis.length) {
+              const secs = Math.round((Date.now()-start)/1000);
+              const xp = Math.max(40, 120 - moves*4); const isBest = this.finish('memory', Math.max(0,40-moves), xp);
+              $('g-body').innerHTML = this.gameOverHTML('🧠','Solved!', moves+' moves · '+secs+'s', xp, isBest, 'memory');
+            }
+          }, 400);
+        } else {
+          setTimeout(()=>{ a.classList.remove('flipped'); b.classList.remove('flipped'); a.textContent='?'; b.textContent='?'; flipped=[]; lock=false; }, 700);
+        }
+      }
+    });
+  },
+
+  // ── REACTION ──
+  reaction() {
+    $('g-title').textContent = '⚡ Reaction Test';
+    $('g-body').innerHTML = `<div id="react-zone" style="aspect-ratio:1.4;border-radius:var(--r-lg);display:grid;place-items:center;background:var(--bg-card);border:1px solid var(--border-subtle);font-weight:700;font-size:18px;cursor:pointer;transition:background 0.1s">Tap to start…</div>
+      <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:8px">Wait for green, then tap as fast as you can</p>`;
+    const z = $('react-zone'); let state='idle', t0, timeout, rounds=[], round=0;
+    const next = () => {
+      round++;
+      if (round > 3) {
+        const avg = Math.round(rounds.reduce((a,b)=>a+b,0)/rounds.length);
+        const xp = Math.max(20, Math.min(90, Math.round(90 - (avg-180)*0.15)));
+        const isBest = this.finish('reaction', Math.max(0, 600-avg), xp);
+        $('g-body').innerHTML = this.gameOverHTML('⚡','Done!', avg+'ms avg', xp, isBest, 'reaction');
+        return;
+      }
+      state='wait'; z.style.background='var(--bg-card)'; z.textContent=`Round ${round}/3 — wait…`;
+      timeout = setTimeout(()=>{ state='go'; t0=performance.now(); z.style.background='rgba(43,255,158,0.3)'; z.textContent='TAP!'; }, 900+Math.random()*1800);
+    };
+    z.onclick = () => {
+      if (state==='idle') { next(); return; }
+      if (state==='wait') { clearTimeout(timeout); z.style.background='rgba(255,84,112,0.3)'; z.textContent='Too soon! Tap to retry'; state='idle'; round--; return; }
+      if (state==='go') { const ms = Math.round(performance.now()-t0); rounds.push(ms); z.textContent=ms+'ms'; z.style.background='var(--bg-card)'; state='idle'; setTimeout(next, 600); }
+    };
+  },
+};
+
+function renderStats() {
+  const today = new Date().toISOString().split('T')[0];
+  const t = LS.getSetting('game_tally', {});
+  $('plays-today').textContent = (t.date===today)?(t.plays||0):0;
+  $('xp-today').textContent = (t.date===today)?(t.xp||0):0;
+  $('total-plays').textContent = AppState.character?.stats?.totalPlays || 0;
+  for (const g of ['coins','quiz','memory','reaction']) {
+    const b = LS.getSetting('best_'+g, 0);
+    $('best-'+g).textContent = b ? '★'+b : '';
+  }
+}
+
+function updateWalletUI() {
+  const w = AppState.wallet, chip = $('wallet-chip');
+  if (w.connected) { chip.classList.add('connected'); $('wallet-addr').textContent = Wallet.shortAddr(w.address); $('wallet-bal').classList.remove('hidden'); $('wallet-bal').textContent = Wallet.formatUSDC(w.usdcBalance)+' USDC'; $('connect-gate').classList.remove('show'); }
+  else { chip.classList.remove('connected'); $('wallet-addr').textContent='Connect'; $('wallet-bal').classList.add('hidden'); $('connect-gate').classList.add('show'); }
+}
+
+EventBus.on('character:loaded', renderStats);
+EventBus.on('wallet:connected', () => { updateWalletUI(); renderStats(); });
+EventBus.on('wallet:balance', updateWalletUI);
+EventBus.on('wallet:disconnected', updateWalletUI);
+renderStats();
+App.init('games');
+</script>
+</body>
+</html>

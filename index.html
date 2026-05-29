@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#04060f">
+<title>BaseXP — Your Crypto Pet</title>
+<meta name="base:app_id" content="6a18a84807babdffa06b0f05" />
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-logo">🥚</div>
+      <div class="brand-name">Base<b>XP</b></div>
+    </div>
+    <div class="wallet-chip" id="wallet-chip" onclick="onWalletChip()">
+      <div class="wallet-dot" id="wallet-dot"></div>
+      <span id="wallet-addr">Connect</span>
+      <span class="wallet-balance hidden" id="wallet-bal"></span>
+    </div>
+  </header>
+
+  <!-- CRITICAL BANNER -->
+  <div class="critical-banner hidden" id="critical-banner">
+    <span id="critical-icon">⚠️</span>
+    <span id="critical-text">Your pet needs you!</span>
+  </div>
+
+  <!-- CHARACTER STAGE -->
+  <div class="char-section reveal">
+    <div class="sleep-overlay" id="sleep-overlay">
+      <div class="zzz-row"><span class="zzz">z</span><span class="zzz">Z</span><span class="zzz">Z</span></div>
+      <span class="sleep-label">Sleeping…</span>
+    </div>
+
+    <div class="char-stage">
+      <div class="char-emoji-wrap" id="char-tap-zone">
+        <div class="char-ring"></div>
+        <div id="char-emoji" title="Tap me!">🥚</div>
+      </div>
+
+      <div class="char-info">
+        <div class="char-name-row">
+          <span class="char-name" id="char-name">Satoshi Jr.</span>
+          <span class="evo-tag" id="evo-tag">Egg</span>
+        </div>
+        <div class="xp-row">
+          <span class="lvl-num" id="lvl-text">Lv.1</span>
+          <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+          <span class="xp-num" id="xp-num">0/100</span>
+        </div>
+        <div class="badges-row">
+          <div class="streak-pill" id="streak-pill">🔥 <span id="streak-num">0</span>d</div>
+          <div class="boost-pill hidden" id="boost-pill">⚡ 2x XP <span id="boost-time"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="speech-wrap"><div id="speech-bubble"></div></div>
+  </div>
+
+  <!-- NEEDS -->
+  <div class="needs-section reveal">
+    <div class="needs-title">Needs</div>
+    <div class="needs-grid">
+      <div class="need-row"><span class="need-ico">🍔</span><div class="need-track"><div class="need-fill nf-hunger" id="nf-hunger" style="width:80%"></div></div><span class="need-val" id="nv-hunger">80</span></div>
+      <div class="need-row"><span class="need-ico">💧</span><div class="need-track"><div class="need-fill nf-water" id="nf-water" style="width:80%"></div></div><span class="need-val" id="nv-water">80</span></div>
+      <div class="need-row"><span class="need-ico">😊</span><div class="need-track"><div class="need-fill nf-happy" id="nf-happy" style="width:80%"></div></div><span class="need-val" id="nv-happy">80</span></div>
+      <div class="need-row"><span class="need-ico">⚡</span><div class="need-track"><div class="need-fill nf-energy" id="nf-energy" style="width:80%"></div></div><span class="need-val" id="nv-energy">80</span></div>
+    </div>
+  </div>
+
+  <!-- DAILY FREE -->
+  <div class="section-header reveal">
+    <span class="section-title">Daily Care</span>
+    <span class="section-badge">Free</span>
+  </div>
+  <div class="free-grid reveal">
+    <div class="act-btn" id="act-gm" onclick="handleGM()"><span class="act-icon">🌅</span><span class="act-name">Say GM</span><span class="act-xp">+50</span></div>
+    <div class="act-btn" id="act-feed" onclick="handleFeed()"><span class="act-icon">🍔</span><span class="act-name">Feed</span><span class="act-xp">+30</span></div>
+    <div class="act-btn" id="act-water" onclick="handleWater()"><span class="act-icon">💧</span><span class="act-name">Water</span><span class="act-xp">+20</span></div>
+    <div class="act-btn" id="act-checkin" onclick="handleCheckIn()"><span class="act-icon">📅</span><span class="act-name">Check-in</span><span class="act-xp">+50</span></div>
+  </div>
+
+  <!-- PREMIUM QUICK -->
+  <div class="section-header reveal" style="margin-top:14px;">
+    <span class="section-title">Power-Ups</span>
+    <span class="section-badge section-badge--usdc">0.05 USDC</span>
+  </div>
+  <div class="paid-scroll reveal" id="quick-shop"></div>
+
+  <div class="page-bottom"></div>
+</div>
+
+<nav class="bottom-nav" style="display:none;"></nav>
+
+<!-- CONNECT GATE -->
+<div class="connect-gate" id="connect-gate">
+  <div class="gate-egg">🥚</div>
+  <div class="gate-title text-gradient-blue">Meet your crypto pet</div>
+  <div class="gate-sub">Raise it, feed it, evolve it through 11 forms — all on Base. Connect your wallet to hatch your egg.</div>
+  <button class="btn btn--primary btn--lg btn--shine" onclick="WalletModal.show()">🔗 Connect Wallet</button>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<script src="shared.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const DOM = {
+  emoji: $('char-emoji'), tapZone: $('char-tap-zone'), name: $('char-name'), evoTag: $('evo-tag'),
+  lvl: $('lvl-text'), xpFill: $('xp-fill'), xpNum: $('xp-num'), streak: $('streak-num'),
+  boostPill: $('boost-pill'), boostTime: $('boost-time'), speech: $('speech-bubble'),
+  sleepOverlay: $('sleep-overlay'), banner: $('critical-banner'), bannerIcon: $('critical-icon'),
+  bannerText: $('critical-text'), walletChip: $('wallet-chip'), walletAddr: $('wallet-addr'),
+  walletDot: $('wallet-dot'), walletBal: $('wallet-bal'), gate: $('connect-gate'),
+  nf: { hunger: $('nf-hunger'), water: $('nf-water'), happy: $('nf-happy'), energy: $('nf-energy') },
+  nv: { hunger: $('nv-hunger'), water: $('nv-water'), happy: $('nv-happy'), energy: $('nv-energy') },
+};
+
+function onWalletChip() { if (AppState.wallet.connected) { if (confirm('Disconnect wallet?')) Wallet.disconnect(); } else WalletModal.show(); }
+
+// Render quick power-ups (top 5)
+function renderQuickShop() {
+  const items = ['special_food','lucky_box','energy_drink','xp_boost','freeze'];
+  $('quick-shop').innerHTML = items.map(id => {
+    const it = SHOP.find(id);
+    const badge = it.badge ? `<div class="paid-badge ${it.badgeClass||''}">${it.badge}</div>` : '';
+    return `<div class="paid-card" onclick="Activities.buy('${id}')">${badge}
+      <span class="paid-icon">${it.icon}</span><span class="paid-name">${it.name}</span>
+      <span class="paid-desc">${it.desc}</span><span class="paid-price">💲 0.05</span></div>`;
+  }).join('') + `<div class="paid-card" onclick="location.href='shop.html'" style="justify-content:center;align-items:center;">
+    <span class="paid-icon">🛒</span><span class="paid-name">Full Shop</span><span class="paid-desc">30+ items, costumes & more</span><span class="paid-price" style="color:var(--neon-purple)">Browse →</span></div>`;
+}
+
+// Full UI render
+function render() {
+  const c = AppState.character;
+  if (!c) { DOM.gate.classList.add('show'); return; }
+  DOM.gate.classList.remove('show');
+  const evo = XP.getEvolution(c.level);
+  DOM.emoji.textContent = c.costume || evo.emoji;
+  DOM.name.textContent = c.name;
+  DOM.evoTag.textContent = evo.name;
+  DOM.lvl.textContent = 'Lv.' + c.level;
+  const need = XP.xpRequired(c.level);
+  DOM.xpFill.style.width = Math.min(100, (c.xp / need) * 100) + '%';
+  DOM.xpNum.textContent = `${Math.floor(c.xp)}/${need}`;
+  DOM.streak.textContent = c.streak;
+  renderNeeds(c.needs);
+  renderBoost(c);
+  renderDailyDone(c);
+  // sleep
+  if (c.isSleeping) { DOM.sleepOverlay.classList.add('visible'); DOM.emoji.classList.add('char-sleep'); }
+  else { DOM.sleepOverlay.classList.remove('visible'); DOM.emoji.classList.remove('char-sleep'); }
+  setIdle();
+}
+
+function renderNeeds(n) {
+  for (const k of ['hunger','water','happy','energy']) {
+    const v = Math.round(n[k]);
+    DOM.nf[k].style.width = v + '%';
+    DOM.nv[k].textContent = v;
+    DOM.nf[k].classList.toggle('low', v <= 20);
+  }
+  const low = Object.entries(n).filter(([,v]) => v <= 15);
+  if (low.length && !AppState.character?.isSleeping) {
+    const map = { hunger:['🍔','is hungry'], water:['💧','is thirsty'], happy:['😢','is sad'], energy:['⚡','is tired'] };
+    const [k] = low[0]; DOM.bannerIcon.textContent = map[k][0]; DOM.bannerText.textContent = `Your pet ${map[k][1]} — take care of it!`;
+    DOM.banner.classList.remove('hidden');
+  } else DOM.banner.classList.add('hidden');
+}
+
+function renderBoost(c) {
+  const active = c.xpBoostUntil && Date.now() < c.xpBoostUntil;
+  DOM.boostPill.classList.toggle('hidden', !active);
+  if (active) DOM.boostTime.textContent = Utils.boostRemainingText() || '';
+}
+
+function renderDailyDone(c) {
+  $('act-gm').classList.toggle('done', c.daily.gm);
+  $('act-feed').classList.toggle('done', c.daily.feed);
+  $('act-water').classList.toggle('done', c.daily.water);
+  $('act-checkin').classList.toggle('done', c.daily.checkin);
+}
+
+let idleTimer;
+function setIdle() {
+  const c = AppState.character;
+  DOM.emoji.classList.remove('char-idle','char-happy','char-dance','char-cry');
+  if (!c) return;
+  if (c.isSleeping) return;
+  const lowNeed = Object.values(c.needs).some(v => v <= 20);
+  DOM.emoji.classList.add(lowNeed ? 'char-cry' : 'char-idle');
+}
+function playEmote(cls, ms = 600) {
+  DOM.emoji.classList.remove('char-idle','char-cry');
+  DOM.emoji.classList.add(cls);
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { DOM.emoji.classList.remove(cls); setIdle(); }, ms);
+}
+
+function showSpeech(text) {
+  DOM.speech.textContent = text; DOM.speech.classList.add('show');
+  clearTimeout(DOM.speech._t); DOM.speech._t = setTimeout(() => DOM.speech.classList.remove('show'), 4000);
+}
+
+// Tap-to-earn
+DOM.tapZone.addEventListener('click', e => {
+  const c = AppState.character; if (!c) { WalletModal.show(); return; }
+  if (c.isSleeping) { Toast.show('Shh… your pet is sleeping 😴', 'warning', '💤'); return; }
+  const gain = Character.tap();
+  if (gain === -1) { showSpeech('Too tired to tap more today 😅'); return; }
+  playEmote('char-happy', 450);
+  Utils.vibrate([12]);
+  // floating +XP
+  const p = document.createElement('div'); p.className = 'tap-xp'; p.textContent = '+1';
+  const r = DOM.tapZone.getBoundingClientRect();
+  p.style.left = (r.width/2 - 8 + (Math.random()*30-15)) + 'px'; p.style.top = '30px';
+  DOM.tapZone.appendChild(p); setTimeout(() => p.remove(), 900);
+  render();
+});
+
+// Handlers
+async function handleGM() { if (!guard()) return; await Activities.gm(); playEmote('char-dance', 800); render(); }
+async function handleFeed() { if (!guard()) return; await Activities.feed(); playEmote('char-happy'); render(); }
+async function handleWater() { if (!guard()) return; await Activities.giveWater(); playEmote('char-happy'); render(); }
+async function handleCheckIn() { if (!guard()) return; await Activities.dailyCheckIn(); playEmote('char-dance', 800); render(); }
+function guard() { if (!AppState.wallet.connected) { WalletModal.show(); return false; } return true; }
+
+// Wallet UI
+function updateWalletUI() {
+  const w = AppState.wallet;
+  if (w.connected) {
+    DOM.walletChip.classList.add('connected');
+    DOM.walletAddr.textContent = Wallet.shortAddr(w.address);
+    DOM.walletBal.classList.remove('hidden');
+    DOM.walletBal.textContent = Wallet.formatUSDC(w.usdcBalance) + ' USDC';
+  } else {
+    DOM.walletChip.classList.remove('connected');
+    DOM.walletAddr.textContent = 'Connect';
+    DOM.walletBal.classList.add('hidden');
+  }
+}
+
+// Events
+EventBus.on('character:loaded', render);
+EventBus.on('character:tick', renderNeeds);
+EventBus.on('character:needChanged', () => render());
+EventBus.on('character:dialog', showSpeech);
+EventBus.on('xp:gained', () => render());
+EventBus.on('character:levelup', () => { playEmote('char-dance', 1000); render(); });
+EventBus.on('character:costume', render);
+EventBus.on('wallet:connected', () => { updateWalletUI(); render(); });
+EventBus.on('wallet:balance', updateWalletUI);
+EventBus.on('wallet:disconnected', () => { updateWalletUI(); DOM.gate.classList.add('show'); });
+EventBus.on('activity:purchase', render);
+
+// boost ticker
+setInterval(() => { if (AppState.character) renderBoost(AppState.character); }, 30000);
+
+renderQuickShop();
+App.init('index');
+</script>
+</body>
+</html>
